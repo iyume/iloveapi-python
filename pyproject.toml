@@ -1,0 +1,34 @@
+[project]
+name = "iloveapi"
+version = "0.1.0"
+description = "Python api client made for ILoveIMG & ILovePDF based on ILoveAPI (https://www.iloveapi.com/docs/api-reference)."
+authors = [{ name = "iyume", email = "iyumelive@gmail.com" }]
+requires-python = ">=3.9"
+license = { text = "MIT" }
+readme = "README.md"
+keywords = ["iloveapi", "iloveimg", "ilovepdf", "api", "sdk", "client"]
+dependencies = ["typing-extensions>=4.0", "httpx>=0.26.0", "pyjwt>=2.4.0"]
+
+[project.optional-dependencies]
+
+[project.urls]
+homepage = "https://github.com/iyume/iloveapi-python"
+repository = "https://github.com/iyume/iloveapi-python.git"
+
+[tool.ruff]
+line-length = 100
+lint.select = ["ALL"]
+lint.ignore = [
+    "D1",      # Missing docstring
+    "EM",
+    "COM812",  # Trailing comma missing
+    "UP035",   # Import from `collections.abc` instead
+    "TRY003",  # Avoid specifying long messages outside the exception class
+    "PLC0414", # Useless import alias (re-export)
+    # "TC004",   # Move import out of type-checking block (good with __future__ annotations)
+    "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
+]
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
