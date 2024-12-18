@@ -26,7 +26,8 @@ lint.ignore = [
     "TRY003",  # Avoid specifying long messages outside the exception class
     "PLC0414", # Useless import alias (re-export)
     # "TC004",   # Move import out of type-checking block (good with __future__ annotations)
-    "ANN401", # Dynamically typed expressions (typing.Any) are disallowed
+    "ANN401",   # Dynamically typed expressions (typing.Any) are disallowed
+    "ASYNC230", # Async functions should not open files with blocking methods like `open`
 ]
 
 [build-system]

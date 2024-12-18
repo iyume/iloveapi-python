@@ -48,8 +48,11 @@ class Rest:
 
     def start(self, tool: T_PdfTools | T_ImageTools) -> httpx.Response:
         url = f"https://api.ilovepdf.com/v1/start/{tool}"
-        with self.client.get_sync_client() as client:
-            return client.get(url)
+        return self.client.request("GET", url)
+
+    async def start_async(self, tool: T_PdfTools | T_ImageTools) -> httpx.Response:
+        url = f"https://api.ilovepdf.com/v1/start/{tool}"
+        return await self.client.request_async("GET", url)
 
     def upload(
         self,
@@ -70,6 +73,25 @@ class Rest:
             files={"file": (file.name, file.open("rb"))},
         )
 
+    async def upload_async(
+        self,
+        server: str,
+        task: str,
+        file: str | Path,
+        chunk: int | None = None,
+        chunks: int | None = None,
+    ) -> httpx.Response:
+        url = f"https://{server}/v1/upload"
+        if chunk or chunks:
+            raise NotImplementedError("Chunked uploads are not supported")
+        file = Path(file)
+        return await self.client.request_async(
+            "POST",
+            url,
+            data={"task": task},
+            files={"file": (file.name, file.open("rb"))},
+        )
+
     def upload_url(
         self, server: str, task: str, cloud_file: str | None = None
     ) -> httpx.Response:
@@ -78,11 +100,25 @@ class Rest:
             "POST", url, data={"task": task, "cloud_file": cloud_file}
         )
 
+    async def upload_url_async(
+        self, server: str, task: str, cloud_file: str | None = None
+    ) -> httpx.Response:
+        url = f"https://{server}/v1/upload"
+        return await self.client.request_async(
+            "POST", url, data={"task": task, "cloud_file": cloud_file}
+        )
+
     def delete_file(
         self, server: str, task: str, server_filename: str
     ) -> httpx.Response:
         url = f"https://{server}/v1/upload/{task}/{server_filename}"
         return self.client.request("DELETE", url)
+
+    async def delete_file_async(
+        self, server: str, task: str, server_filename: str
+    ) -> httpx.Response:
+        url = f"https://{server}/v1/upload/{task}/{server_filename}"
+        return await self.client.request_async("DELETE", url)
 
     class _File(TypedDict):
         server_filename: str
@@ -103,9 +139,26 @@ class Rest:
             "POST", url, json={"task": task, "tool": tool, "files": files} | kwargs
         )
 
+    async def process_async(
+        self,
+        server: str,
+        task: str,
+        tool: T_PdfTools | T_ImageTools,
+        files: list[_File],
+        **kwargs: Any,
+    ) -> httpx.Response:
+        url = f"https://{server}/v1/process"
+        return await self.client.request_async(
+            "POST", url, json={"task": task, "tool": tool, "files": files} | kwargs
+        )
+
     def download(self, server: str, task: str) -> httpx.Response:
         url = f"https://{server}/v1/download/{task}"
         return self.client.request("GET", url)
+
+    async def download_async(self, server: str, task: str) -> httpx.Response:
+        url = f"https://{server}/v1/download/{task}"
+        return await self.client.request_async("GET", url)
 
     def tasks(self, **kwargs: Any) -> httpx.Response:
         url = "https://api.ilovepdf.com/v1/task"
@@ -113,10 +166,28 @@ class Rest:
             "POST", url, json={"secret_key": self.client.secret_key} | kwargs
         )
 
+    async def tasks_async(self, **kwargs: Any) -> httpx.Response:
+        url = "https://api.ilovepdf.com/v1/task"
+        return await self.client.request_async(
+            "POST", url, json={"secret_key": self.client.secret_key} | kwargs
+        )
+
     def delete_task(self, server: str, task: str) -> httpx.Response:
         url = f"https://{server}/v1/task/{task}"
         return self.client.request("DELETE", url)
 
+    async def delete_task_async(self, server: str, task: str) -> httpx.Response:
+        url = f"https://{server}/v1/task/{task}"
+        return await self.client.request_async("DELETE", url)
+
     def connect_task(self, server: str, task: str, tool: str) -> httpx.Response:
         url = f"https://{server}/v1/task/next"
         return self.client.request("POST", url, json={"task": task, "tool": tool})
+
+    async def connect_task_async(
+        self, server: str, task: str, tool: str
+    ) -> httpx.Response:
+        url = f"https://{server}/v1/task/next"
+        return await self.client.request_async(
+            "POST", url, json={"task": task, "tool": tool}
+        )
