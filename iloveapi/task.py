@@ -79,7 +79,7 @@ class Task:
         rotate: NotRequired[int]
         password: NotRequired[str]
 
-    def process(self, files: list[_File] | None = None) -> None:
+    def process(self, files: list[_File] | None = None, **kwargs: Any) -> None:
         proc_files: list[Rest._File]
         # Duplicate filename are processed as "{filename}-copy-0"
         if files is None:
@@ -110,7 +110,7 @@ class Task:
                     }
                 )
         process_response = self.client.rest.process(
-            self._server, self._task, self._tool, proc_files
+            self._server, self._task, self._tool, proc_files, **kwargs
         )
         process_response.raise_for_status()
 
