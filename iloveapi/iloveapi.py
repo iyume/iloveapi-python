@@ -9,10 +9,12 @@ from typing_extensions import Self
 
 from iloveapi.auth import TokenAuth
 from iloveapi.rest import Rest
+from iloveapi.task import Task
 
 if TYPE_CHECKING:
     from types import TracebackType
 
+    from iloveapi.typing import T_ImageTools, T_PdfTools
     from iloveapi.utils import cast_omit_self
 
 
@@ -40,6 +42,12 @@ class ILoveApi:
     @property
     def rest(self) -> Rest:
         return self._rest
+
+    def create_task(self, tool: T_PdfTools | T_ImageTools) -> Task:
+        return Task.create(self, tool)
+
+    async def create_task_async(self, tool: T_PdfTools | T_ImageTools) -> Task:
+        return await Task.create_async(self, tool)
 
     # sync context
     def __enter__(self) -> Self:

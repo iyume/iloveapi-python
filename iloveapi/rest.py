@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from typing_extensions import NotRequired
 
@@ -9,37 +9,7 @@ if TYPE_CHECKING:
     import httpx
 
     from iloveapi.iloveapi import ILoveApi
-
-T_PdfTools = Literal[
-    "compress",
-    "extract",
-    "htmlpdf",
-    "imagepdf",
-    "merge",
-    "officepdf",
-    "pagenumber",
-    "pdfa",
-    "pdfjpg",
-    "pdfocr",
-    "protect",
-    "repair",
-    "rotate",
-    "split",
-    "unlock",
-    "validatepdfa",
-    "watermark",
-]
-T_ImageTools = Literal[
-    "compressimage",
-    "cropimage",
-    "convertimage",
-    "removebackgroundimage",
-    "repairimage",
-    "resizeimage",
-    "rotateimage",
-    "upscaleimage",
-    "watermarkimage",
-]
+    from iloveapi.typing import T_ImageTools, T_PdfTools
 
 
 class Rest:
@@ -65,7 +35,8 @@ class Rest:
         url = f"https://{server}/v1/upload"
         if chunk or chunks:
             raise NotImplementedError("Chunked uploads are not supported")
-        file = Path(file)
+        if not isinstance(file, Path):
+            file = Path(file)
         return self.client.request(
             "POST",
             url,
@@ -84,7 +55,8 @@ class Rest:
         url = f"https://{server}/v1/upload"
         if chunk or chunks:
             raise NotImplementedError("Chunked uploads are not supported")
-        file = Path(file)
+        if not isinstance(file, Path):
+            file = Path(file)
         return await self.client.request_async(
             "POST",
             url,
