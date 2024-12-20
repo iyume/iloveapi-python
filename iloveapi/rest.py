@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import IO, TYPE_CHECKING, Any, TypedDict
 
 from typing_extensions import NotRequired
 
@@ -28,40 +29,47 @@ class Rest:
         self,
         server: str,
         task: str,
-        file: str | Path,
+        file: str | Path | bytes | BytesIO,
         chunk: int | None = None,
         chunks: int | None = None,
     ) -> httpx.Response:
         url = f"https://{server}/v1/upload"
         if chunk or chunks:
             raise NotImplementedError("Chunked uploads are not supported")
-        if not isinstance(file, Path):
-            file = Path(file)
+        filebuf: bytes | IO[bytes]
+        if isinstance(file, (Path, str)):
+            filebuf = open(file, "rb")
+        else:
+            filebuf = file
         return self.client.request(
             "POST",
             url,
             data={"task": task},
-            files={"file": (file.name, file.open("rb"))},
+            # filename seems not necessary
+            files={"file": filebuf},
         )
 
     async def upload_async(
         self,
         server: str,
         task: str,
-        file: str | Path,
+        file: str | Path | bytes | BytesIO,
         chunk: int | None = None,
         chunks: int | None = None,
     ) -> httpx.Response:
         url = f"https://{server}/v1/upload"
         if chunk or chunks:
             raise NotImplementedError("Chunked uploads are not supported")
-        if not isinstance(file, Path):
-            file = Path(file)
+        filebuf: bytes | IO[bytes]
+        if isinstance(file, (Path, str)):
+            filebuf = open(file, "rb")
+        else:
+            filebuf = file
         return await self.client.request_async(
             "POST",
             url,
             data={"task": task},
-            files={"file": (file.name, file.open("rb"))},
+            files={"file": filebuf},
         )
 
     def upload_url(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict, cast, overload
 
@@ -46,23 +47,75 @@ class Task:
         data = task_response.json()
         return cls(client, data["server"], data["task"], tool)
 
-    def add_file(self, file: str | Path) -> str:
-        if not isinstance(file, Path):
-            file = Path(file)
+    def _resolve_filename(
+        self, file: str | Path | bytes | BytesIO, filename: str | None = None
+    ) -> str:
+        # No filename or file extension will cause 400 Bad Request
+        if isinstance(file, (bytes, BytesIO)):
+            if filename is None:
+                raise ValueError("filename must be provided for bytes/BytesIO")
+        elif isinstance(file, (str, Path)):
+            if filename is None:
+                filename = Path(file).name
+        else:
+            raise TypeError("file must be str, Path, bytes or BytesIO")
+        return filename
+
+    def add_file(
+        self, file: str | Path | bytes | BytesIO, filename: str | None = None
+    ) -> str:
+        """Add a file to the task.
+
+        Not recommended. Use `process_files` instead.
+
+        Args:
+            file: The file to add.
+            filename: The filename to use. None to infer from the file path.
+
+        Returns:
+            The server filename of the uploaded file.
+
+        """
+        filename = self._resolve_filename(file, filename)
         upload_response = self.client.rest.upload(self._server, self._task, file)
         upload_response.raise_for_status()
-        return self._add_file(upload_response, file.name)
+        return self._add_file(upload_response, filename)
 
-    async def add_file_async(self, file: str | Path) -> str:
-        if not isinstance(file, Path):
-            file = Path(file)
+    async def add_file_async(
+        self, file: str | Path | bytes | BytesIO, filename: str | None = None
+    ) -> str:
+        """Add a file to the task.
+
+        Not recommended. Use `process_files` instead.
+
+        Args:
+            file: The file to add.
+            filename: The filename to use. None to infer from the file path.
+
+        Returns:
+            The server filename of the uploaded file.
+
+        """
+        filename = self._resolve_filename(file, filename)
         upload_response = await self.client.rest.upload_async(
             self._server, self._task, file
         )
         upload_response.raise_for_status()
-        return self._add_file(upload_response, file.name)
+        return self._add_file(upload_response, filename)
 
     def add_file_by_url(self, url: str, filename: str | None = None) -> str:
+        """Add a file to the task by URL.
+
+        Not recommended. Use `process_files` instead.
+
+        Args:
+            url: The URL of the file to add.
+            filename: The filename to use. None to infer from the URL.
+
+        Returns:
+            The server filename of the uploaded file.
+
+        """
         if filename is None:
             # Use the final path component of the URL as the filename
             # Not a best practice, or get from Content-Disposition header
@@ -72,6 +125,18 @@ class Task:
         return self._add_file(upload_response, filename)
 
     async def add_file_by_url_async(self, url: str, filename: str | None = None) -> str:
+        """Add a file to the task by URL.
+
+        Not recommended. Use `process_files` instead.
+
+        Args:
+            url: The URL of the file to add.
+            filename: The filename to use. None to infer from the URL.
+
+        Returns:
+            The server filename of the uploaded file.
+
+        """
         if filename is None:
             filename = get_filename_from_url(url)
         upload_response = await self.client.rest.upload_url_async(
@@ -128,6 +193,15 @@ class Task:
         return proc_files
 
     def process(self, files: list[_File] | None = None, **kwargs: Any) -> None:
+        """Process the uploaded files.
+
+        Not recommended. Use `process_files` instead.
+
+        Args:
+            files: List of server files to process. None to process all uploaded files.
+            **kwargs: Additional parameters to pass to the API.
+
+        """
         proc_files = self._get_process_files(files)
         process_response = self.client.rest.process(
             self._server, self._task, self._tool, proc_files, **kwargs
@@ -137,7 +211,114 @@ class Task:
     async def process_async(
         self, files: list[_File] | None = None, **kwargs: Any
     ) -> None:
+        """Process the uploaded files.
+
+        Not recommended. Use `process_files` instead.
+
+        Args:
+            files: List of server files to process. None to process all uploaded files.
+            **kwargs: Additional parameters to pass to the API.
+
+        """
         proc_files = self._get_process_files(files)
+        process_response = await self.client.rest.process_async(
+            self._server, self._task, self._tool, proc_files, **kwargs
+        )
+        process_response.raise_for_status()
+
+    def _resolve_process_files_file(
+        self, file: str | Path | tuple[str, str | Path | bytes | BytesIO] | _UploadFile
+    ) -> tuple[str, str | Path | bytes | BytesIO]:
+        if isinstance(file, tuple):
+            return file
+        if isinstance(file, (str, Path)):
+            return Path(file).name, file
+        if isinstance(file, dict):
+            file_ = file["file"]
+            filename = file.get("filename")
+            if filename is not None:
+                return filename, file_
+            if isinstance(file_, (str, Path)):
+                return Path(file_).name, file_
+            raise ValueError("filename must be provided for bytes/BytesIO")
+        raise TypeError("file must be str, Path or tuple of filename and file")
+
+    class _UploadFile(TypedDict):
+        file: str | Path | bytes | BytesIO
+        filename: NotRequired[str]
+        rotate: NotRequired[int]
+        password: NotRequired[str]
+
+    def _merge_process_file_parameter(
+        self, file: Rest._File, upload_file: _UploadFile
+    ) -> Rest._File:
+        if "rotate" in upload_file:
+            file["rotate"] = upload_file["rotate"]
+        if "password" in upload_file:
+            file["password"] = upload_file["password"]
+        return file
+
+    def process_files(
+        self,
+        *files: str | Path | tuple[str, str | Path | bytes | BytesIO] | _UploadFile,
+        **kwargs: Any,
+    ) -> None:
+        """Upload and process the given files.
+
+        Args:
+            files: List of files to process.
+                str or Path: File path.
+                tuple[str, str | Path | bytes | BytesIO]: Filename and file path or content.
+            **kwargs: Additional parameters to pass to the API.
+
+        """
+        proc_files: list[Rest._File] = []
+        for upload_file in files:
+            filename, file = self._resolve_process_files_file(upload_file)
+            upload_response = self.client.rest.upload(self._server, self._task, file)
+            upload_response.raise_for_status()
+            data = upload_response.json()
+            proc_file: Rest._File = {
+                "server_filename": data["server_filename"],
+                "filename": filename,
+            }
+            if isinstance(upload_file, dict):
+                self._merge_process_file_parameter(proc_file, upload_file)
+            proc_files.append(proc_file)
+        process_response = self.client.rest.process(
+            self._server, self._task, self._tool, proc_files, **kwargs
+        )
+        process_response.raise_for_status()
+
+    async def process_files_async(
+        self,
+        *files: str | Path | tuple[str, str | Path | bytes | BytesIO] | _UploadFile,
+        **kwargs: Any,
+    ) -> None:
+        """Upload and process the given files.
+
+        Args:
+            files: List of files to process.
+                str or Path: File path.
+                tuple[str, str | Path | bytes | BytesIO]: Filename and file path or content.
+            **kwargs: Additional parameters to pass to the API.
+
+        """
+        proc_files: list[Rest._File] = []
+        for upload_file in files:
+            filename, file = self._resolve_process_files_file(upload_file)
+            upload_response = await self.client.rest.upload_async(
+                self._server, self._task, file
+            )
+            upload_response.raise_for_status()
+            data = upload_response.json()
+            proc_file: Rest._File = {
+                "server_filename": data["server_filename"],
+                "filename": filename,
+            }
+            if isinstance(upload_file, dict):
+                self._merge_process_file_parameter(proc_file, upload_file)
+            proc_files.append(proc_file)
         process_response = await self.client.rest.process_async(
             self._server, self._task, self._tool, proc_files, **kwargs
         )
