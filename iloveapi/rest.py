@@ -30,22 +30,23 @@ class Rest:
         server: str,
         task: str,
         file: str | Path | bytes | BytesIO,
+        filename: str | None = None,
         chunk: int | None = None,
         chunks: int | None = None,
     ) -> httpx.Response:
         url = f"https://{server}/v1/upload"
         if chunk or chunks:
             raise NotImplementedError("Chunked uploads are not supported")
-        filebuf: bytes | IO[bytes]
+        if isinstance(file, (bytes, BytesIO)) and not filename:
+            raise ValueError("Filename is required for bytes or BytesIO file")
         if isinstance(file, (Path, str)):
             filebuf = open(file, "rb")
         else:
-            filebuf = file
+            filebuf = (filename, file)
         return self.client.request(
             "POST",
             url,
             data={"task": task},
-            # filename seems not necessary
             files={"file": filebuf},
         )
 
@@ -54,17 +55,19 @@ class Rest:
         server: str,
         task: str,
         file: str | Path | bytes | BytesIO,
+        filename: str | None = None,
         chunk: int | None = None,
         chunks: int | None = None,
     ) -> httpx.Response:
         url = f"https://{server}/v1/upload"
         if chunk or chunks:
             raise NotImplementedError("Chunked uploads are not supported")
-        filebuf: bytes | IO[bytes]
+        if isinstance(file, (bytes, BytesIO)) and not filename:
+            raise ValueError("Filename is required for bytes or BytesIO file")
         if isinstance(file, (Path, str)):
             filebuf = open(file, "rb")
         else:
-            filebuf = file
+            filebuf = (filename, file)
         return await self.client.request_async(
             "POST",
             url,

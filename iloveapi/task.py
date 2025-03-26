@@ -77,7 +77,9 @@ class Task:
 
         """
         filename = self._resolve_filename(file, filename)
-        upload_response = self.client.rest.upload(self._server, self._task, file)
+        upload_response = self.client.rest.upload(
+            self._server, self._task, file, filename=filename
+        )
         upload_response.raise_for_status()
         return self._add_file(upload_response, filename)
 
@@ -98,7 +100,7 @@ class Task:
         """
         filename = self._resolve_filename(file, filename)
         upload_response = await self.client.rest.upload_async(
-            self._server, self._task, file
+            self._server, self._task, file, filename=filename
         )
         upload_response.raise_for_status()
         return self._add_file(upload_response, filename)
@@ -177,7 +179,7 @@ class Task:
             uploaded_files = to_dict(self._uploaded_files, "server_filename")
             proc_files = []
             for file in files:
-                file = cast(Any, file)
+                file = cast("Any", file)
                 server_filename = file.pop("server_filename")
                 filename = file.pop("filename")
                 uploaded_file = uploaded_files.get(server_filename)
@@ -275,7 +277,9 @@ class Task:
         proc_files: list[Rest._File] = []
         for upload_file in files:
             filename, file = self._resolve_process_files_file(upload_file)
-            upload_response = self.client.rest.upload(self._server, self._task, file)
+            upload_response = self.client.rest.upload(
+                self._server, self._task, file, filename=filename
+            )
             upload_response.raise_for_status()
             data = upload_response.json()
             proc_file: Rest._File = {
@@ -308,7 +312,7 @@ class Task:
         for upload_file in files:
             filename, file = self._resolve_process_files_file(upload_file)
             upload_response = await self.client.rest.upload_async(
-                self._server, self._task, file
+                self._server, self._task, file, filename=filename
             )
             upload_response.raise_for_status()
             data = upload_response.json()
