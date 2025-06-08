@@ -23,10 +23,17 @@ TimeoutTypes = Union[
     httpx.Timeout,
 ]
 
+DEFAULT_TIMEOUT = httpx.Timeout(timeout=10)
+
 
 class ILoveApi:
+
     def __init__(
-        self, *, public_key: str, secret_key: str, timeout: TimeoutTypes = 10
+        self,
+        *,
+        public_key: str,
+        secret_key: str,
+        timeout: TimeoutTypes = DEFAULT_TIMEOUT,
     ) -> None:
         self._public_key = public_key
         self._secret_key = secret_key
