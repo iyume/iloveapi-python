@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager, contextmanager
 from contextvars import ContextVar
-from typing import TYPE_CHECKING, Any, AsyncGenerator, Generator, cast
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Generator, Optional, Union, cast
 
 import httpx
 from typing_extensions import Self
@@ -17,11 +17,20 @@ if TYPE_CHECKING:
     from iloveapi.typing import T_ImageTools, T_PdfTools
     from iloveapi.utils import cast_omit_self
 
+TimeoutTypes = Union[
+    Optional[float],
+    tuple[Optional[float], Optional[float], Optional[float], Optional[float]],
+    httpx.Timeout,
+]
+
 
 class ILoveApi:
-    def __init__(self, *, public_key: str, secret_key: str) -> None:
+    def __init__(
+        self, *, public_key: str, secret_key: str, timeout: TimeoutTypes = 10
+    ) -> None:
         self._public_key = public_key
         self._secret_key = secret_key
+        self._timeout = timeout
         self._sync_client: ContextVar[httpx.Client | None] = ContextVar(
             "sync_client", default=None
         )
@@ -83,12 +92,12 @@ class ILoveApi:
 
     def _create_sync_client(self) -> httpx.Client:
         return httpx.Client(
-            auth=TokenAuth(self._public_key, self._secret_key),
+            auth=TokenAuth(self._public_key, self._secret_key), timeout=self._timeout
         )
 
     def _create_async_client(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(
-            auth=TokenAuth(self._public_key, self._secret_key),
+            auth=TokenAuth(self._public_key, self._secret_key), timeout=self._timeout
         )
 
     # get or create sync client
