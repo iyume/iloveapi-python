@@ -48,6 +48,16 @@ task.process_files(
 task.download("output.zip")  # zip format
 ```
 
+Tool parameter:
+
+```python
+
+task.process_files(
+    "p1.png",
+    multiplier=2,  # All keyword parameter will be directly sent to server
+)
+```
+
 Async support:
 
 ```python
